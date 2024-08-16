@@ -8,4 +8,3 @@ require (
 	github.com/creachadair/atomicfile v0.3.4
 	github.com/creachadair/mds v0.17.1
 )
-
