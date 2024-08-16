@@ -1,6 +1,6 @@
 module github.com/creachadair/gocache
 
-go 1.23.0
+go 1.22
 
 require github.com/creachadair/taskgroup v0.9.0
 
