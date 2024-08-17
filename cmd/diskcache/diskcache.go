@@ -43,5 +43,7 @@ func main() {
 	if err := s.Run(context.Background(), os.Stdin, os.Stdout); err != nil {
 		log.Printf("Server exited with error: %v", err)
 	}
-	fmt.Fprintln(os.Stderr, s.Metrics())
+	if *doVerbose {
+		fmt.Fprintln(os.Stderr, s.Metrics())
+	}
 }
