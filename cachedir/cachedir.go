@@ -168,11 +168,13 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 }
 
 func (d *Dir) idFromPath(kind, path string) string {
-	trim, ok := strings.CutPrefix(path, d.path+"/"+kind+"/")
+	// Expected path format: <dir>/<kind>/<xx>/<id>
+	tail, _ := filepath.Rel(d.path, path)         // remove <dir>/
+	tail, ok := strings.CutPrefix(tail, kind+"/") // remove <kind>/
 	if !ok {
 		return ""
 	}
-	return filepath.Base(trim)
+	return filepath.Base(tail)
 }
 
 func (d *Dir) actionPath(id string) string {
