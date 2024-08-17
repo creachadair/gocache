@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/creachadair/taskgroup"
 )
@@ -97,7 +98,7 @@ func (s *Server) Metrics() *expvar.Map {
 //
 // If in reports io.EOF, Run returns nil; otherwise it reports the error that
 // terminated the service.
-func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) error {
+func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr error) {
 	rd := bufio.NewReader(in)
 	dec := json.NewDecoder(rd)
 
@@ -118,6 +119,10 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) error {
 		return fmt.Errorf("write server init: %w", err)
 	}
 	s.logf("cache server started")
+	start := time.Now()
+	defer func() {
+		s.logf("cache server exiting (%v elapsed, err=%v)", time.Since(start), xerr)
+	}()
 
 	g, run := taskgroup.New(nil).Limit(s.maxRequests())
 	defer g.Wait()
