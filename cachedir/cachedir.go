@@ -64,7 +64,7 @@ func (d *Dir) Get(ctx context.Context, actionID string) (objectID, diskPath stri
 
 // Put implements the corresponding method of the gocache service interface.
 func (d *Dir) Put(ctx context.Context, obj gocache.Object) (diskPath string, _ error) {
-	path, size, err := d.writeObject(obj.ObjectID, obj.Body)
+	path, size, err := d.writeObject(obj.ObjectID, obj.Size, obj.Body)
 	if err != nil {
 		return "", err
 	}
@@ -213,11 +213,19 @@ func (d *Dir) writeAction(id, objectID string, size int64) error {
 	})
 }
 
-func (d *Dir) writeObject(id string, data io.Reader) (string, int64, error) {
+func (d *Dir) writeObject(id string, expSize int64, data io.Reader) (string, int64, error) {
 	path, err := makePath(id, d.objectPath)
 	if err != nil {
 		return "", 0, err
 	}
+
+	// If the specified object is already present and has the expected size,
+	// skip writing the object.
+	fi, err := os.Stat(path)
+	if err == nil && fi.Mode().IsRegular() && fi.Size() == expSize {
+		return path, fi.Size(), nil
+	}
+
 	sz, err := atomicfile.WriteAll(path, data, 0600)
 	return path, sz, err
 }
