@@ -57,6 +57,11 @@ type Server struct {
 	// API: "close"
 	Close func(context.Context) error
 
+	// SetMetrics, if non-nil, is called once when the server starts up.  The
+	// function should populate the provided map with any metrics it wishes to
+	// expose via the service's Metrics method (under "host").
+	SetMetrics func(ctx context.Context, m *expvar.Map)
+
 	// Logf, if non-nil, is used to write log messages.  If nil, logs are
 	// discarded.
 	Logf func(string, ...any)
@@ -74,6 +79,7 @@ type Server struct {
 	putRequests expvar.Int
 	putBytes    expvar.Int
 	putErrors   expvar.Int
+	hostMetrics expvar.Map
 }
 
 // Metrics returns a map of server metrics. The caller is responsible for
@@ -88,6 +94,7 @@ func (s *Server) Metrics() *expvar.Map {
 	m.Set("put_requests", &s.putRequests)
 	m.Set("put_bytes", &s.putBytes)
 	m.Set("put_errors", &s.putErrors)
+	m.Set("host", &s.hostMetrics)
 	return m
 }
 
@@ -99,6 +106,9 @@ func (s *Server) Metrics() *expvar.Map {
 // If in reports io.EOF, Run returns nil; otherwise it reports the error that
 // terminated the service.
 func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr error) {
+	if s.SetMetrics != nil {
+		s.SetMetrics(ctx, &s.hostMetrics)
+	}
 	rd := bufio.NewReader(in)
 	dec := json.NewDecoder(rd)
 
