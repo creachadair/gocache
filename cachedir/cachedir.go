@@ -53,13 +53,20 @@ func New(path string) (*Dir, error) {
 
 // Get implements the corresponding method of the gocache service interface.
 func (d *Dir) Get(ctx context.Context, actionID string) (objectID, diskPath string, _ error) {
-	objectID, _, err := d.readAction(actionID)
+	objectID, sz, err := d.readAction(actionID)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", "", nil // cache miss
 	} else if err != nil {
 		return "", "", err
 	}
-	return objectID, d.objectPath(objectID), nil
+
+	// Verify that the object for this action is present and matches the
+	// expected size, or else treat it as a miss.
+	diskPath = d.objectPath(objectID)
+	if fi, err := os.Stat(diskPath); err != nil || fi.Size() != sz {
+		return "", "", nil // cache miss
+	}
+	return objectID, diskPath, nil
 }
 
 // Put implements the corresponding method of the gocache service interface.

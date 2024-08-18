@@ -216,7 +216,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		if errors.Is(err, os.ErrNotExist) {
 			// Treat a missing object as a normal cache miss, to allow for the
 			// possibility that the action record has gone out of sync due to
-			// cache pruning.
+			// cache pruning or a concurrent update to the same ID.
 			return &progResponse{Miss: true}, nil
 		} else if err != nil {
 			return nil, fmt.Errorf("get: stat disk path: %w", err)
