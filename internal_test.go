@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -88,15 +87,15 @@ func TestServer(t *testing.T) {
 	sr, cw := io.Pipe() // client to server
 	dec := json.NewDecoder(cr)
 	enc := json.NewEncoder(cw)
-	var wmu sync.Mutex
+
 	send := func(v any) {
-		wmu.Lock()
-		defer wmu.Unlock()
+		t.Helper()
 		if err := enc.Encode(v); err != nil {
 			t.Errorf("Encode: unexpected error: %v", err)
 		}
 	}
-	receive := func() *progResponse {
+	recv := func() *progResponse {
+		t.Helper()
 		var rsp progResponse
 		if err := dec.Decode(&rsp); errors.Is(err, io.EOF) {
 			return nil
@@ -106,73 +105,75 @@ func TestServer(t *testing.T) {
 		return &rsp
 	}
 
+	// Run the server...
 	srv := taskgroup.Go(func() error {
 		return s.Run(ctx, sr, sw)
 	})
 
-	// Check that the server reports the initial banner listing the supported
-	// commands. Do this separately to ensure it arrives first.
-	if diff := gocmp.Diff(receive(), &progResponse{
-		ID: 0, KnownCommands: []string{"get", "put", "close"},
-	}); diff != "" {
-		t.Fatalf("Server banner (-got, +want):\n%s", diff)
-	}
-
-	// Receive and buffer responses concurrently.
+	// Run the client...
 	rsps := make(map[int64]*progResponse)
-	rcv := taskgroup.Go(taskgroup.NoError(func() {
-		for {
-			msg := receive()
-			if msg == nil {
-				return
+	cli := taskgroup.Go(taskgroup.NoError(func() {
+		defer cw.Close() // close the channel to the server
+
+		// The test program specifies the order of operations the client executes.
+		// Each step sends and/or receives a message.
+		// The total number of receives must match the number of sends.
+		program := []struct {
+			send *progRequest  // send this request to the server
+			want *progResponse // wait for a response and ensure it matches
+			wait bool          // wait for an arbitrary response
+		}{
+			{want: &progResponse{ID: 0, KnownCommands: []string{"get", "put", "close"}}},
+			{
+				send: &progRequest{ID: 1, Command: "get", ActionID: []byte("\x01")},
+				want: &progResponse{ID: 1, Miss: true},
+			},
+			{send: &progRequest{ID: 2, Command: "get", ActionID: []byte("\x02")}},
+			{send: &progRequest{ID: 3, Command: "get", ActionID: []byte("\x99")}},
+			{wait: true},
+			{send: &progRequest{ID: 4, Command: "put",
+				ActionID: []byte("\x03"),
+				ObjectID: []byte("\x0b\x1e\xc7"),
+				BodySize: 5,
+				Body:     strings.NewReader("xyzzy"),
+			}},
+			{wait: true},
+			{send: &progRequest{ID: 999, Command: "close"}},
+			{wait: true},
+			{wait: true},
+		}
+		for i, tc := range program {
+			if tc.send != nil {
+				send(tc.send)
+				if tc.send.BodySize > 0 {
+					b, err := io.ReadAll(tc.send.Body)
+					if err != nil {
+						t.Errorf("Send [%d]: read body: %v", i+1, err)
+					} else {
+						send(b)
+					}
+				}
 			}
-			if rsps[msg.ID] != nil {
-				t.Errorf("Duplicate ID %d received", msg.ID)
-			} else {
-				rsps[msg.ID] = msg
+			if tc.wait || tc.want != nil {
+				rsp := recv()
+				if tc.want != nil {
+					if diff := gocmp.Diff(rsp, tc.want); diff != "" {
+						t.Errorf("Recv [%d] (-got, +want):\n%s", i+1, diff)
+					}
+				} else {
+					rsps[rsp.ID] = rsp
+				}
 			}
 		}
 	}))
+	cli.Wait()
+	// client complete
 
-	// Send a bunch of known requests...
-	program := []*progRequest{
-		{ID: 1, Command: "get", ActionID: []byte("\x01")},
-		{ID: 2, Command: "get", ActionID: []byte("\x02")},
-		{ID: 3, Command: "get", ActionID: []byte("\x99")},
-		{ID: 4, Command: "put",
-			ActionID: []byte("\x03"),
-			ObjectID: []byte("\x0b\x1e\xc7"),
-			BodySize: 5,
-			Body:     strings.NewReader("xyzzy"),
-		},
-		{ID: 999, Command: "close"},
-	}
-	var g taskgroup.Group
-	for i, req := range program {
-		g.Go(taskgroup.NoError(func() {
-			send(req)
-			if req.BodySize > 0 {
-				b, err := io.ReadAll(req.Body)
-				if err != nil {
-					t.Errorf("Send [%d]: read body: %v", i+1, err)
-				} else {
-					send(b)
-				}
-			}
-		}))
-	}
-	g.Wait()
-	// sends complete
-
-	cw.Close()
 	if err := srv.Wait(); err != nil {
 		t.Errorf("Server exit: unexpected error: %v", err)
 	}
-	// server complete
-
 	sw.Close()
-	rcv.Wait()
-	// receiver complete
+	// server complete
 
 	// Verify that everything got called.
 	if !didClose.Load() {
@@ -190,7 +191,6 @@ func TestServer(t *testing.T) {
 
 	// Check that we got the desired responses.
 	if diff := gocmp.Diff(rsps, map[int64]*progResponse{
-		1:   {ID: 1, Miss: true},
 		2:   {ID: 2, Size: 5, Time: &objTime, DiskPath: objPath},
 		3:   {ID: 3, Err: "get 99: erroneous condition"},
 		4:   {ID: 4, DiskPath: objPath},
