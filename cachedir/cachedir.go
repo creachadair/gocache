@@ -80,7 +80,7 @@ func (d *Dir) Cleanup(age time.Duration) func(context.Context) error {
 		return nil
 	}
 	return func(ctx context.Context) error {
-		gocache.Logf(ctx, "begin cache cleanup (%v)", age)
+		gocache.Logf(ctx, "begin cache cleanup (age: %v)", age)
 		stats, err := d.PruneEntries(ctx, age)
 		if err != nil {
 			return err
