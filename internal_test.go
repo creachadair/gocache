@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -87,6 +88,14 @@ func TestServer(t *testing.T) {
 	sr, cw := io.Pipe() // client to server
 	dec := json.NewDecoder(cr)
 	enc := json.NewEncoder(cw)
+	var wmu sync.Mutex
+	send := func(v any) {
+		wmu.Lock()
+		defer wmu.Unlock()
+		if err := enc.Encode(v); err != nil {
+			t.Errorf("Encode: unexpected error: %v", err)
+		}
+	}
 	receive := func() *progResponse {
 		var rsp progResponse
 		if err := dec.Decode(&rsp); errors.Is(err, io.EOF) {
@@ -141,15 +150,13 @@ func TestServer(t *testing.T) {
 	var g taskgroup.Group
 	for i, req := range program {
 		g.Go(taskgroup.NoError(func() {
-			if err := enc.Encode(req); err != nil {
-				t.Errorf("Send [%d]: unexpected error: %v", i+1, err)
-			}
+			send(req)
 			if req.BodySize > 0 {
 				b, err := io.ReadAll(req.Body)
 				if err != nil {
 					t.Errorf("Send [%d]: read body: %v", i+1, err)
-				} else if err := enc.Encode(b); err != nil {
-					t.Errorf("Send [%d]: send body: %v", i+1, err)
+				} else {
+					send(b)
 				}
 			}
 		}))
