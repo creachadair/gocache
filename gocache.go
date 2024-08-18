@@ -86,15 +86,19 @@ type Server struct {
 // exporting these metrics.
 func (s *Server) Metrics() *expvar.Map {
 	m := new(expvar.Map)
-	m.Set("get_requests", &s.getRequests)
-	m.Set("get_hits", &s.getHits)
-	m.Set("get_hit_bytes", &s.getHitBytes)
-	m.Set("get_misses", &s.getMisses)
-	m.Set("get_errors", &s.getErrors)
-	m.Set("put_requests", &s.putRequests)
-	m.Set("put_bytes", &s.putBytes)
-	m.Set("put_errors", &s.putErrors)
 	m.Set("host", &s.hostMetrics)
+
+	sm := new(expvar.Map)
+	sm.Set("get_requests", &s.getRequests)
+	sm.Set("get_hits", &s.getHits)
+	sm.Set("get_hit_bytes", &s.getHitBytes)
+	sm.Set("get_misses", &s.getMisses)
+	sm.Set("get_errors", &s.getErrors)
+	sm.Set("put_requests", &s.putRequests)
+	sm.Set("put_bytes", &s.putBytes)
+	sm.Set("put_errors", &s.putErrors)
+	m.Set("server", sm)
+
 	return m
 }
 
