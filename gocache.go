@@ -205,16 +205,20 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		}
 
 		// Safety check: The object ID should be hex-encoded and non-empty.
-		oid, err := hex.DecodeString(objectID)
-		if err != nil {
-			return nil, fmt.Errorf("get: invalid object ID: %w", err)
-		} else if len(oid) == 0 {
+		if objectID == "" {
 			return nil, errors.New("get: empty object ID")
+		} else if _, err := hex.DecodeString(objectID); err != nil {
+			return nil, fmt.Errorf("get: invalid object ID: %w", err)
 		}
 
 		// Safety check: The object file must exist and be a regular file.
 		fi, err := os.Stat(diskPath)
-		if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Treat a missing object as a normal cache miss, to allow for the
+			// possibility that the action record has gone out of sync due to
+			// cache pruning.
+			return &progResponse{Miss: true}, nil
+		} else if err != nil {
 			return nil, fmt.Errorf("get: stat disk path: %w", err)
 		} else if !fi.Mode().IsRegular() {
 			return nil, fmt.Errorf("get: not a regular file: %q", diskPath)
