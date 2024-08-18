@@ -258,9 +258,10 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		// Safety check: The object file must exist and match the provided size.
 		fi, err := os.Stat(diskPath)
 		if err != nil {
-			return nil, fmt.Errorf("put %x: stat: %w", req.ActionID, err)
+			return nil, fmt.Errorf("put action %x verify: %w", req.ActionID, err)
 		} else if fi.Size() != req.BodySize {
-			return nil, fmt.Errorf("put %q: got %d bytes, want %d", diskPath, fi.Size(), req.BodySize)
+			return nil, fmt.Errorf("put action %x verify %q: got %d bytes, want %d",
+				req.ActionID, diskPath, fi.Size(), req.BodySize)
 		}
 
 		// Write successful.
