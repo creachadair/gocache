@@ -74,6 +74,7 @@ func TestServer(t *testing.T) {
 		Close: func(ctx context.Context) error {
 			checkContext(ctx)
 			didClose.Store(true)
+			Logf(ctx, "context-logger-present")
 			return nil
 		},
 		SetMetrics: func(ctx context.Context, m *expvar.Map) {
@@ -198,6 +199,7 @@ func TestServer(t *testing.T) {
 		"cache server started",
 		"erroneous condition",
 		"cache server exiting",
+		"context-logger-present",
 	} {
 		if !strings.Contains(logText, want) {
 			t.Errorf("Missing log string: %v", want)
