@@ -135,7 +135,8 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 	s.logf("cache server started")
 	start := time.Now()
 	defer func() {
-		s.logf("cache server exiting (%v elapsed, err=%v)", time.Since(start), xerr)
+		s.logf("cache server exiting (%v elapsed, err=%v)",
+			time.Since(start).Round(100*time.Microsecond), xerr)
 	}()
 
 	g, run := taskgroup.New(nil).Limit(s.maxRequests())
