@@ -129,12 +129,23 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 		}
 		s.Actions++
 
+		// Check whether the object specified by the action is still available.
+		// If not, prune the action as invalid.
+		if _, err := os.Stat(d.objectPath(objID)); err != nil {
+			s.ActionsPruned++
+			gocache.Logf(ctx, "invalid action %v (object=%v)", id, objID)
+			return os.Remove(path)
+		}
+
+		// If the action has not been modified within the age limit, expire it.
 		fi, _ := de.Info()
 		if start.Sub(fi.ModTime()) > age {
 			s.ActionsPruned++
 			gocache.Logf(ctx, "expire action %v", id)
 			return os.Remove(path)
 		}
+
+		// Mark this action's object as in-use.
 		keepObject.Add(objID)
 		return nil
 	}); err != nil {
