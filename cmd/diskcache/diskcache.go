@@ -3,12 +3,13 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"runtime"
 
 	"github.com/creachadair/gocache"
 	"github.com/creachadair/gocache/cachedir"
@@ -16,9 +17,10 @@ import (
 )
 
 var (
-	cacheDir  = flag.String("cache-dir", "", "Cache directory (required)")
-	maxAge    = flag.Duration("x", 24*time.Hour, "Age after which cache entries expire")
-	doVerbose = flag.Bool("v", false, "Enable verbose logging")
+	cacheDir    = flag.String("cache-dir", "", "Cache directory (required)")
+	maxAge      = flag.Duration("x", 0, "Age after which cache entries expire")
+	doVerbose   = flag.Bool("v", false, "Enable verbose logging")
+	concurrency = flag.Int("c", 0, "Maximum number of concurrent requests")
 )
 
 func main() {
@@ -37,7 +39,8 @@ func main() {
 		Put:   dir.Put,
 		Close: dir.Cleanup(*maxAge),
 
-		Logf: value.Cond(*doVerbose, log.Printf, nil),
+		MaxRequests: cmp.Or(*concurrency, runtime.NumCPU()),
+		Logf:        value.Cond(*doVerbose, log.Printf, nil),
 	}
 
 	if err := s.Run(context.Background(), os.Stdin, os.Stdout); err != nil {
