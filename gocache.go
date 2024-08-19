@@ -312,6 +312,7 @@ type Object struct {
 	ObjectID string    // non-empty; lower-case hexadecimal digits
 	Size     int64     // object size in bytes
 	Body     io.Reader // always non-nil
+	ModTime  time.Time // if non-zero, set the object mod-time to this
 }
 
 // Logf writes a log to the logger associated with ctx, if one is defined.

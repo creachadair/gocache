@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -71,7 +70,7 @@ func (d *Dir) Get(ctx context.Context, actionID string) (objectID, diskPath stri
 
 // Put implements the corresponding method of the gocache service interface.
 func (d *Dir) Put(ctx context.Context, obj gocache.Object) (diskPath string, _ error) {
-	path, size, err := d.writeObject(obj.ObjectID, obj.Size, obj.Body)
+	path, size, err := d.writeObject(obj)
 	if err != nil {
 		return "", err
 	}
@@ -231,8 +230,8 @@ func (d *Dir) writeAction(id, objectID string, size int64) error {
 	})
 }
 
-func (d *Dir) writeObject(id string, expSize int64, data io.Reader) (string, int64, error) {
-	path, err := makePath(id, d.objectPath)
+func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
+	path, err := makePath(obj.ObjectID, d.objectPath)
 	if err != nil {
 		return "", 0, err
 	}
@@ -240,11 +239,14 @@ func (d *Dir) writeObject(id string, expSize int64, data io.Reader) (string, int
 	// If the specified object is already present and has the expected size,
 	// skip writing the object.
 	fi, err := os.Stat(path)
-	if err == nil && fi.Mode().IsRegular() && fi.Size() == expSize {
+	if err == nil && fi.Mode().IsRegular() && fi.Size() == obj.Size {
 		return path, fi.Size(), nil
 	}
 
-	sz, err := atomicfile.WriteAll(path, data, 0600)
+	sz, err := atomicfile.WriteAll(path, obj.Body, 0600)
+	if err == nil && !obj.ModTime.IsZero() {
+		os.Chtimes(path, time.Time{} /* atime: ignore */, obj.ModTime) // best-effort
+	}
 	return path, sz, err
 }
 
