@@ -219,9 +219,9 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 			// cache pruning or a concurrent update to the same ID.
 			return &progResponse{Miss: true}, nil
 		} else if err != nil {
-			return nil, fmt.Errorf("get: stat disk path: %w", err)
+			return nil, fmt.Errorf("get: verify path: %w", err)
 		} else if !fi.Mode().IsRegular() {
-			return nil, fmt.Errorf("get: not a regular file: %q", diskPath)
+			return nil, fmt.Errorf("get: verify path: not a regular file: %q", diskPath)
 		}
 
 		// Cache hit.
