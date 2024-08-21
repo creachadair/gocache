@@ -172,9 +172,9 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 			s.ObjectsPruned++
 			fi, _ := de.Info()
 			s.BytesPruned += fi.Size()
-			gocache.Logf(ctx, "remove object %v (%d bytes)", id, fi.Size())
+			gocache.Logf(ctx, "rm orphan object %v (%d bytes)", id, fi.Size())
 			if err := os.Remove(path); err != nil {
-				gocache.Logf(ctx, "remove object %v: %v (ignored)", id, err)
+				gocache.Logf(ctx, "rm object: %v (ignored)", err)
 			}
 		}
 		return nil
