@@ -23,6 +23,7 @@ var flags = struct {
 	MaxAge      time.Duration `flag:"x,Age after which cache entries expire"`
 	Metrics     bool          `flag:"m,Print cache metrics to stderr on exit"`
 	Verbose     bool          `flag:"v,Enable verbose logging"`
+	DebugLog    bool          `flag:"debug,Enable detailed debug logs (noisy)"`
 }{
 	Concurrency: runtime.NumCPU(),
 }
@@ -48,6 +49,7 @@ func main() {
 				Close:       dir.Cleanup(flags.MaxAge),
 				MaxRequests: flags.Concurrency,
 				Logf:        value.Cond(flags.Verbose, log.Printf, nil),
+				LogRequests: flags.DebugLog,
 			}
 
 			if err := s.Run(context.Background(), os.Stdin, os.Stdout); err != nil {
