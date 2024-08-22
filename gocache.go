@@ -165,7 +165,7 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 	g, run := taskgroup.New(nil).Limit(s.maxRequests())
 	defer g.Wait()
 
-	ctx, cancel := context.WithCancel(context.WithValue(ctx, logKey{}, s.logf))
+	ctx, cancel := context.WithCancel(WithLogf(ctx, s.logf))
 	defer cancel()
 
 	for {
@@ -363,6 +363,12 @@ func Logf(ctx context.Context, msg string, args ...any) {
 	if ok {
 		logf(msg, args...)
 	}
+}
+
+// WithLogf returns a child of ctx with the specified log function attached.
+// The resulting context can be used with [Logf] to send logs to f.
+func WithLogf(ctx context.Context, f func(string, ...any)) context.Context {
+	return context.WithValue(ctx, logKey{}, f)
 }
 
 type logKey struct{}
