@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creachadair/mds/value"
 	"github.com/creachadair/taskgroup"
 )
 
@@ -69,6 +70,28 @@ type Server struct {
 	// MaxRequests determines the maximum number of requests that may be
 	// serviced concurrently by the server. If zero, it uses runtime.NumCPU.
 	MaxRequests int
+
+	// LogRequests, if true, enables detailed (but noisy) debug logging of all
+	// requests received and handled by the server.
+	//
+	// Each request is presented as a pair of logs:
+	//
+	//    B <command> R:<id> ...
+	//    E <command> R:<id> ... err <error>, <time> elapsed
+	//
+	// The "B" line is logged when the request begins and describes the inputs,
+	// The "E" line is logged when the request ends and reports the results, any
+	// error that occurred, and the time elapsed. Fields are given in a brief
+	// format:
+	//
+	//    R:<request-id>
+	//    A:<action-id>
+	//    O:<object-id>
+	//    S:<size>         -- for "put" requests, object size in bytes
+	//    M:<miss>         -- for "get" requests, true/false
+	//    DP:"<diskpath>"
+	//
+	LogRequests bool
 
 	// Metrics
 	getRequests expvar.Int
@@ -182,15 +205,20 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 
 // handleRequest returns the response corresponding to req, or an error.
 func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progResponse, oerr error) {
+	start := time.Now()
 	switch req.Command {
 	case "get":
+		s.vlogf("B GET R:%d, A:%x", req.ID, req.ActionID)
 		defer func() {
-			if pr != nil && pr.Miss {
+			isMiss := pr != nil && pr.Miss
+			if isMiss {
 				s.getMisses.Add(1)
 			}
 			if oerr != nil {
 				s.getErrors.Add(1)
 			}
+			s.vlogf("E GET R:%d, A:%x, M:%v, err %v, %v elapsed, DP:%q",
+				req.ID, req.ActionID, isMiss, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.getRequests.Add(1)
 
@@ -231,10 +259,13 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath}, nil
 
 	case "put":
+		s.vlogf("B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.ObjectID, req.BodySize)
 		defer func() {
 			if oerr != nil {
 				s.putErrors.Add(1)
 			}
+			s.vlogf("E PUT R:%d, err %v, %v elapsed, DP:%q",
+				req.ID, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.putRequests.Add(1)
 
@@ -270,6 +301,10 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 
 	case "close":
 		if s.Close != nil {
+			s.vlogf("B CLOSE R:%d", req.ID)
+			defer func() {
+				s.vlogf("E CLOSE R:%d, err %v, %v elapsed", req.ID, oerr, time.Since(start))
+			}()
 			return &progResponse{}, s.Close(ctx)
 		}
 		return &progResponse{}, nil
@@ -282,6 +317,12 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 func (s *Server) logf(msg string, args ...any) {
 	if s.Logf != nil {
 		s.Logf(msg, args...)
+	}
+}
+
+func (s *Server) vlogf(msg string, args ...any) {
+	if s.LogRequests {
+		s.logf(msg, args...)
 	}
 }
 

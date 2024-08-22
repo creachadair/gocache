@@ -81,7 +81,8 @@ func TestServer(t *testing.T) {
 			checkContext(ctx)
 			didSetMetrics.Store(true)
 		},
-		Logf: log.New(&logBuf, "", log.LstdFlags).Printf,
+		Logf:        log.New(&logBuf, "", log.LstdFlags).Printf,
+		LogRequests: true,
 	}
 	cr, sw := io.Pipe() // server to client
 	sr, cw := io.Pipe() // client to server
@@ -207,6 +208,12 @@ func TestServer(t *testing.T) {
 		"erroneous condition",
 		"cache server exiting",
 		"context-logger-present",
+
+		// Check for output from the detailed request logs.
+		"B PUT R:4",
+		"E PUT R:4, err <nil>",
+		"B CLOSE R:999",
+		"E CLOSE R:999, err <nil>",
 	} {
 		if !strings.Contains(logText, want) {
 			t.Errorf("Missing log string: %v", want)
