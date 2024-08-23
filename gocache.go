@@ -208,7 +208,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 	start := time.Now()
 	switch req.Command {
 	case "get":
-		s.vlogf("B GET R:%d, A:%x", req.ID, req.ActionID)
+		s.vlogf("bc B GET R:%d, A:%x", req.ID, req.ActionID)
 		defer func() {
 			isMiss := pr != nil && pr.Miss
 			if isMiss {
@@ -217,7 +217,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 			if oerr != nil {
 				s.getErrors.Add(1)
 			}
-			s.vlogf("E GET R:%d, A:%x, M:%v, err %v, %v elapsed, DP:%q",
+			s.vlogf("bc E GET R:%d, A:%x, M:%v, err %v, %v elapsed, DP:%q",
 				req.ID, req.ActionID, isMiss, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.getRequests.Add(1)
@@ -259,12 +259,12 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath}, nil
 
 	case "put":
-		s.vlogf("B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.ObjectID, req.BodySize)
+		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.ObjectID, req.BodySize)
 		defer func() {
 			if oerr != nil {
 				s.putErrors.Add(1)
 			}
-			s.vlogf("E PUT R:%d, err %v, %v elapsed, DP:%q",
+			s.vlogf("bc E PUT R:%d, err %v, %v elapsed, DP:%q",
 				req.ID, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.putRequests.Add(1)
@@ -301,9 +301,9 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 
 	case "close":
 		if s.Close != nil {
-			s.vlogf("B CLOSE R:%d", req.ID)
+			s.vlogf("bc B CLOSE R:%d", req.ID)
 			defer func() {
-				s.vlogf("E CLOSE R:%d, err %v, %v elapsed", req.ID, oerr, time.Since(start))
+				s.vlogf("bc E CLOSE R:%d, err %v, %v elapsed", req.ID, oerr, time.Since(start))
 			}()
 			return &progResponse{}, s.Close(ctx)
 		}
