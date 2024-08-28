@@ -155,6 +155,7 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 	if err := encode(&progResponse{ID: 0, KnownCommands: s.commands()}); err != nil {
 		return fmt.Errorf("write server init: %w", err)
 	}
+
 	s.logf("cache server started")
 	start := time.Now()
 	defer func() {
@@ -165,9 +166,7 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 	g, run := taskgroup.New(nil).Limit(s.maxRequests())
 	defer g.Wait()
 
-	ctx, cancel := context.WithCancel(WithLogf(ctx, s.logf))
-	defer cancel()
-
+	runCtx := WithLogf(ctx, s.logf)
 	for {
 		var req progRequest
 		if err := dec.Decode(&req); errors.Is(err, io.EOF) {
@@ -191,7 +190,7 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) (xerr err
 		}
 
 		run(func() error {
-			rsp, err := s.handleRequest(ctx, &req)
+			rsp, err := s.handleRequest(runCtx, &req)
 			if err != nil {
 				s.logf("request %d failed: %v", req.ID, err)
 				rsp = &progResponse{ID: req.ID, Err: err.Error()}
