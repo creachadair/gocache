@@ -44,7 +44,7 @@ type Dir struct {
 // New constructs a new file cache using the specified directory.  If path does
 // not exist, it is created.
 func New(path string) (*Dir, error) {
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if err := os.MkdirAll(path, 0755); err != nil {
 		return nil, err
 	}
 	return &Dir{path: path}, nil
@@ -243,7 +243,7 @@ func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
 		return path, fi.Size(), nil
 	}
 
-	sz, err := atomicfile.WriteAll(path, obj.Body, 0600)
+	sz, err := atomicfile.WriteAll(path, obj.Body, 0644)
 	if err == nil && !obj.ModTime.IsZero() {
 		os.Chtimes(path, time.Time{} /* atime: ignore */, obj.ModTime) // best-effort
 	}
@@ -252,5 +252,5 @@ func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
 
 func makePath(id string, f func(string) string) (string, error) {
 	path := f(id)
-	return path, os.MkdirAll(filepath.Dir(path), 0700)
+	return path, os.MkdirAll(filepath.Dir(path), 0755)
 }
