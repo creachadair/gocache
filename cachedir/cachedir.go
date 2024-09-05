@@ -18,6 +18,14 @@
 // is written, i.e., when a new object ID is sent for that action.
 //
 // Object files contain only the literal contents of the object.
+//
+// # Important Note
+//
+// The cache directory and its contents must be readable by the user running
+// the Go toolchain, since cache objects are reported back as paths that the
+// compiler will read directly from disk. The [Dir] creates directories and
+// files with world read access, but if the cache root directory is created in
+// advance, ensure that directory itself is also readable.
 package cachedir
 
 import (
