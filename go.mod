@@ -2,7 +2,7 @@ module github.com/creachadair/gocache
 
 go 1.22
 
-require github.com/creachadair/taskgroup v0.9.1
+require github.com/creachadair/taskgroup v0.9.3
 
 require (
 	github.com/creachadair/atomicfile v0.3.5
