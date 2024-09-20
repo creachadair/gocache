@@ -220,43 +220,12 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 				req.ID, req.ActionID, isMiss, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.getRequests.Add(1)
-
-		if s.Get == nil {
-			return &progResponse{Miss: true}, nil
+		if len(req.ActionID) == 0 {
+			// This should not be possible with a real toolchain, but defend
+			// against weird input from a human testing things.
+			return nil, errors.New("get: invalid ActionID")
 		}
-		objectID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
-		if err != nil {
-			return nil, fmt.Errorf("get %x: %w", req.ActionID, err)
-		} else if objectID == "" && diskPath == "" {
-			return &progResponse{Miss: true}, nil
-		}
-
-		// Safety check: The object ID should be hex-encoded and non-empty.
-		if objectID == "" {
-			return nil, errors.New("get: empty object ID")
-		} else if _, err := hex.DecodeString(objectID); err != nil {
-			return nil, fmt.Errorf("get: invalid object ID: %w", err)
-		}
-
-		// Safety check: The object file must exist and be a regular file.
-		fi, err := os.Stat(diskPath)
-		if errors.Is(err, os.ErrNotExist) {
-			// Treat a missing object as a normal cache miss, to allow for the
-			// possibility that the action record has gone out of sync due to
-			// cache pruning or a concurrent update to the same ID.
-			return &progResponse{Miss: true}, nil
-		} else if err != nil {
-			return nil, fmt.Errorf("get: verify path: %w", err)
-		} else if !fi.Mode().IsRegular() {
-			return nil, fmt.Errorf("get: verify path: not a regular file: %q", diskPath)
-		}
-
-		// Cache hit.
-		s.getHits.Add(1)
-		s.getHitBytes.Add(fi.Size())
-		added := fi.ModTime().UTC()
-		return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath}, nil
-
+		return s.handleGet(ctx, req)
 	case "put":
 		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.ObjectID, req.BodySize)
 		defer func() {
@@ -267,36 +236,12 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 				req.ID, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.putRequests.Add(1)
-
-		// If no body was provided, swap in an empty reader.
-		body := cmp.Or(req.Body, io.Reader(strings.NewReader("")))
-		defer io.Copy(io.Discard, body)
-		if s.Put == nil {
-			return nil, errors.New("put: cache is read-only")
+		if len(req.ActionID) == 0 || len(req.ObjectID) == 0 {
+			// This should not be possible with a real toolchain, but defend
+			// against weird input from a human testing things.
+			return nil, errors.New("put: invalid ActionID/ObjectID")
 		}
-
-		diskPath, err := s.Put(ctx, Object{
-			ActionID: fmt.Sprintf("%x", req.ActionID),
-			ObjectID: fmt.Sprintf("%x", req.ObjectID),
-			Size:     req.BodySize,
-			Body:     body,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("put %x: %w", req.ActionID, err)
-		}
-
-		// Safety check: The object file must exist and match the provided size.
-		fi, err := os.Stat(diskPath)
-		if err != nil {
-			return nil, fmt.Errorf("put action %x verify: %w", req.ActionID, err)
-		} else if fi.Size() != req.BodySize {
-			return nil, fmt.Errorf("put action %x verify %q: got %d bytes, want %d",
-				req.ActionID, diskPath, fi.Size(), req.BodySize)
-		}
-
-		// Write successful.
-		s.putBytes.Add(fi.Size())
-		return &progResponse{DiskPath: diskPath}, nil
+		return s.handlePut(ctx, req)
 
 	case "close":
 		if s.Close != nil {
@@ -311,6 +256,78 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 	default:
 		return nil, fmt.Errorf("unknown command %q", req.Command)
 	}
+}
+
+// handleGet handles "get" requests.
+func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progResponse, oerr error) {
+	if s.Get == nil {
+		return &progResponse{Miss: true}, nil
+	}
+	objectID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
+	if err != nil {
+		return nil, fmt.Errorf("get %x: %w", req.ActionID, err)
+	} else if objectID == "" && diskPath == "" {
+		return &progResponse{Miss: true}, nil
+	}
+
+	// Safety check: The object ID should be hex-encoded and non-empty.
+	if objectID == "" {
+		return nil, errors.New("get: empty object ID")
+	} else if _, err := hex.DecodeString(objectID); err != nil {
+		return nil, fmt.Errorf("get: invalid object ID: %w", err)
+	}
+
+	// Safety check: The object file must exist and be a regular file.
+	fi, err := os.Stat(diskPath)
+	if errors.Is(err, os.ErrNotExist) {
+		// Treat a missing object as a normal cache miss, to allow for the
+		// possibility that the action record has gone out of sync due to
+		// cache pruning or a concurrent update to the same ID.
+		return &progResponse{Miss: true}, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("get: verify path: %w", err)
+	} else if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("get: verify path: not a regular file: %q", diskPath)
+	}
+
+	// Cache hit.
+	s.getHits.Add(1)
+	s.getHitBytes.Add(fi.Size())
+	added := fi.ModTime().UTC()
+	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath}, nil
+}
+
+// handlePut handles "put" requests.
+func (s *Server) handlePut(ctx context.Context, req *progRequest) (pr *progResponse, oerr error) {
+	// If no body was provided, swap in an empty reader.
+	body := cmp.Or(req.Body, io.Reader(strings.NewReader("")))
+	defer io.Copy(io.Discard, body)
+	if s.Put == nil {
+		return nil, errors.New("put: cache is read-only")
+	}
+
+	diskPath, err := s.Put(ctx, Object{
+		ActionID: fmt.Sprintf("%x", req.ActionID),
+		ObjectID: fmt.Sprintf("%x", req.ObjectID),
+		Size:     req.BodySize,
+		Body:     body,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("put %x: %w", req.ActionID, err)
+	}
+
+	// Safety check: The object file must exist and match the provided size.
+	fi, err := os.Stat(diskPath)
+	if err != nil {
+		return nil, fmt.Errorf("put action %x verify: %w", req.ActionID, err)
+	} else if fi.Size() != req.BodySize {
+		return nil, fmt.Errorf("put action %x verify %q: got %d bytes, want %d",
+			req.ActionID, diskPath, fi.Size(), req.BodySize)
+	}
+
+	// Write successful.
+	s.putBytes.Add(fi.Size())
+	return &progResponse{DiskPath: diskPath}, nil
 }
 
 func (s *Server) logf(msg string, args ...any) {
