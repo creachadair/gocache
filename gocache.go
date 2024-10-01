@@ -88,7 +88,7 @@ type Server struct {
 	//    A:<action-id>
 	//    O:<object-id>
 	//    S:<size>         -- for "put" requests, object size in bytes
-	//    M:<miss>         -- for "get" requests, true/false
+	//    M:<miss>         -- for "get" requests: 1=true, 0=false
 	//    DP:"<diskpath>"
 	//
 	LogRequests bool
@@ -217,7 +217,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 				s.getErrors.Add(1)
 			}
 			s.vlogf("bc E GET R:%d, A:%x, M:%v, err %v, %v elapsed, DP:%q",
-				req.ID, req.ActionID, isMiss, oerr, time.Since(start), value.At(pr).DiskPath)
+				req.ID, req.ActionID, value.Cond(isMiss, 1, 0), oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.getRequests.Add(1)
 		if len(req.ActionID) == 0 {
