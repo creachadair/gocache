@@ -4,7 +4,7 @@ go 1.23
 
 toolchain go1.23.1
 
-require github.com/creachadair/taskgroup v0.9.4
+require github.com/creachadair/taskgroup v0.11.0
 
 require (
 	github.com/creachadair/atomicfile v0.3.5
