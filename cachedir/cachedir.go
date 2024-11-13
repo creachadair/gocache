@@ -4,7 +4,7 @@
 // # Cache Layout
 //
 // Actions are cached in a subdirectory named "action", and objects are cached
-// in a subdirectory named "object". Within each directory, IDs are partitioned
+// in a subdirectory named "output". Within each directory, IDs are partitioned
 // by a prefix of their hex representation, e.g. "01234567" is stored as:
 //
 //	01/01234567
@@ -69,7 +69,7 @@ func (d *Dir) Get(ctx context.Context, actionID string) (outputID, diskPath stri
 
 	// Verify that the output for this action is present and matches the
 	// expected size, or else treat it as a miss.
-	diskPath = d.objectPath(outputID)
+	diskPath = d.outputPath(outputID)
 	if fi, err := os.Stat(diskPath); err != nil || fi.Size() != sz {
 		return "", "", nil // cache miss
 	}
@@ -145,7 +145,7 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 
 		// Check whether the object specified by the action is still available.
 		// If not, prune the action as invalid.
-		if _, err := os.Stat(d.objectPath(objID)); err != nil {
+		if _, err := os.Stat(d.outputPath(objID)); err != nil {
 			s.ActionsPruned++
 			gocache.Logf(ctx, "rm action %v (invalid, obj=%v)", id, objID)
 			return os.Remove(path)
@@ -167,7 +167,7 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 	}
 
 	// Sweep: Delete objects not referenced by unexpired actions.
-	root = filepath.Join(d.path, "object")
+	root = filepath.Join(d.path, "output")
 	if err := filepath.WalkDir(root, func(path string, de fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -176,7 +176,7 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 		}
 		s.Objects++
 
-		if id := d.idFromPath("object", path); id != "" && !keepObject.Has(id) {
+		if id := d.idFromPath("output", path); id != "" && !keepObject.Has(id) {
 			s.ObjectsPruned++
 			fi, _ := de.Info()
 			s.BytesPruned += fi.Size()
@@ -206,8 +206,8 @@ func (d *Dir) actionPath(id string) string {
 	return filepath.Join(d.path, "action", id[:2], id)
 }
 
-func (d *Dir) objectPath(id string) string {
-	return filepath.Join(d.path, "object", id[:2], id)
+func (d *Dir) outputPath(id string) string {
+	return filepath.Join(d.path, "output", id[:2], id)
 }
 
 func (d *Dir) readAction(id string) (outputID string, size int64, _ error) {
@@ -239,7 +239,7 @@ func (d *Dir) writeAction(id, outputID string, size int64) error {
 }
 
 func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
-	path, err := makePath(obj.OutputID, d.objectPath)
+	path, err := makePath(obj.OutputID, d.outputPath)
 	if err != nil {
 		return "", 0, err
 	}
