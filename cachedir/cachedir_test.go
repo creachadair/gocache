@@ -45,7 +45,7 @@ func TestDir(t *testing.T) {
 	testTime := time.Date(2024, 8, 25, 12, 46, 50, 0, time.Local)
 	diskPath, err := d.Put(ctx, gocache.Object{
 		ActionID: "good-action",
-		ObjectID: "some-object",
+		OutputID: "some-object",
 		Size:     5,
 		Body:     strings.NewReader("xyzzy"),
 		ModTime:  testTime,

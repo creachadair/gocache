@@ -52,7 +52,7 @@ func TestServer(t *testing.T) {
 	var logBuf bytes.Buffer
 	var didClose, didMiss, didError, didSetMetrics atomic.Bool
 	s := &Server{
-		Get: func(ctx context.Context, actionID string) (objectID, diskPath string, _ error) {
+		Get: func(ctx context.Context, actionID string) (outputID, diskPath string, _ error) {
 			checkContext(ctx)
 			switch actionID {
 			case actionMiss:
@@ -134,7 +134,7 @@ func TestServer(t *testing.T) {
 			{wait: true},
 			{send: &progRequest{ID: 4, Command: "put",
 				ActionID: []byte("\x03"),
-				ObjectID: []byte("\x0b\x1e\xc7"),
+				OutputID: []byte("\x0b\x1e\xc7"),
 				BodySize: 5,
 				Body:     strings.NewReader("xyzzy"),
 			}},
@@ -199,7 +199,7 @@ func TestServer(t *testing.T) {
 		2:   {ID: 2, Size: 5, Time: &objTime, DiskPath: objPath},
 		3:   {ID: 3, Err: "get 99: erroneous condition"},
 		4:   {ID: 4, DiskPath: objPath},
-		5:   {ID: 5, Err: "put: invalid ActionID/ObjectID"},
+		5:   {ID: 5, Err: "put: invalid ActionID/OutputID"},
 		6:   {ID: 6, Err: "get: invalid ActionID"},
 		999: {ID: 999}, // close response
 	}); diff != "" {

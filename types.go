@@ -23,7 +23,7 @@ type progRequest struct {
 	ActionID []byte `json:",omitempty"` // or nil if not used
 
 	// ObjectID is set for Type "put" and "output-file".
-	ObjectID []byte `json:",omitempty"` // or nil if not used
+	OutputID []byte `json:",omitempty"` // or nil if not used
 
 	// Body is the body for "put" requests. It's sent after the JSON object
 	// as a base64-encoded JSON string when BodySize is non-zero.
@@ -57,7 +57,7 @@ type progResponse struct {
 
 	// For Get requests.
 	Miss     bool       `json:",omitempty"` // cache miss
-	ObjectID []byte     `json:"OutputID,omitempty"`
+	OutputID []byte     `json:",omitempty"`
 	Size     int64      `json:",omitempty"` // in bytes
 	Time     *time.Time `json:",omitempty"` // an Entry.Time; when the object was added to the docs
 

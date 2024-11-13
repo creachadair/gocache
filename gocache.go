@@ -41,7 +41,7 @@ type Server struct {
 	// To report a cache miss, Get must return "", "", nil.
 	//
 	// API: "get"
-	Get func(ctx context.Context, actionID string) (objectID, diskPath string, _ error)
+	Get func(ctx context.Context, actionID string) (outputID, diskPath string, _ error)
 
 	// Put stores the specified object for an action.
 	// If nil, the server will reject requests to write to the cache.
@@ -227,7 +227,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		}
 		return s.handleGet(ctx, req)
 	case "put":
-		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.ObjectID, req.BodySize)
+		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.OutputID, req.BodySize)
 		defer func() {
 			if oerr != nil {
 				s.putErrors.Add(1)
@@ -236,10 +236,10 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 				req.ID, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.putRequests.Add(1)
-		if len(req.ActionID) == 0 || len(req.ObjectID) == 0 {
+		if len(req.ActionID) == 0 || len(req.OutputID) == 0 {
 			// This should not be possible with a real toolchain, but defend
 			// against weird input from a human testing things.
-			return nil, errors.New("put: invalid ActionID/ObjectID")
+			return nil, errors.New("put: invalid ActionID/OutputID")
 		}
 		return s.handlePut(ctx, req)
 
@@ -263,17 +263,17 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	if s.Get == nil {
 		return &progResponse{Miss: true}, nil
 	}
-	objectID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
+	outputID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
 	if err != nil {
 		return nil, fmt.Errorf("get %x: %w", req.ActionID, err)
-	} else if objectID == "" && diskPath == "" {
+	} else if outputID == "" && diskPath == "" {
 		return &progResponse{Miss: true}, nil
 	}
 
-	// Safety check: The object ID should be hex-encoded and non-empty.
-	if objectID == "" {
-		return nil, errors.New("get: empty object ID")
-	} else if _, err := hex.DecodeString(objectID); err != nil {
+	// Safety check: The output ID should be hex-encoded and non-empty.
+	if outputID == "" {
+		return nil, errors.New("get: empty output ID")
+	} else if _, err := hex.DecodeString(outputID); err != nil {
 		return nil, fmt.Errorf("get: invalid object ID: %w", err)
 	}
 
@@ -308,7 +308,7 @@ func (s *Server) handlePut(ctx context.Context, req *progRequest) (pr *progRespo
 
 	diskPath, err := s.Put(ctx, Object{
 		ActionID: fmt.Sprintf("%x", req.ActionID),
-		ObjectID: fmt.Sprintf("%x", req.ObjectID),
+		OutputID: fmt.Sprintf("%x", req.OutputID),
 		Size:     req.BodySize,
 		Body:     body,
 	})
@@ -366,7 +366,7 @@ func (s *Server) commands() []string {
 // An Object defines an object to be stored into the cache.
 type Object struct {
 	ActionID string    // non-empty; lower-case hexadecimal digits
-	ObjectID string    // non-empty; lower-case hexadecimal digits
+	OutputID string    // non-empty; lower-case hexadecimal digits
 	Size     int64     // object size in bytes
 	Body     io.Reader // always non-nil
 	ModTime  time.Time // if non-zero, set the object mod-time to this

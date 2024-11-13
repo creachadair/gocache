@@ -59,21 +59,21 @@ func New(path string) (*Dir, error) {
 }
 
 // Get implements the corresponding method of the gocache service interface.
-func (d *Dir) Get(ctx context.Context, actionID string) (objectID, diskPath string, _ error) {
-	objectID, sz, err := d.readAction(actionID)
+func (d *Dir) Get(ctx context.Context, actionID string) (outputID, diskPath string, _ error) {
+	outputID, sz, err := d.readAction(actionID)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", "", nil // cache miss
 	} else if err != nil {
 		return "", "", err
 	}
 
-	// Verify that the object for this action is present and matches the
+	// Verify that the output for this action is present and matches the
 	// expected size, or else treat it as a miss.
-	diskPath = d.objectPath(objectID)
+	diskPath = d.objectPath(outputID)
 	if fi, err := os.Stat(diskPath); err != nil || fi.Size() != sz {
 		return "", "", nil // cache miss
 	}
-	return objectID, diskPath, nil
+	return outputID, diskPath, nil
 }
 
 // Put implements the corresponding method of the gocache service interface.
@@ -82,7 +82,7 @@ func (d *Dir) Put(ctx context.Context, obj gocache.Object) (diskPath string, _ e
 	if err != nil {
 		return "", err
 	}
-	return path, d.writeAction(obj.ActionID, obj.ObjectID, size)
+	return path, d.writeAction(obj.ActionID, obj.OutputID, size)
 }
 
 // Cleanup returns a function implementing the Close method of the gocache
@@ -210,11 +210,11 @@ func (d *Dir) objectPath(id string) string {
 	return filepath.Join(d.path, "object", id[:2], id)
 }
 
-func (d *Dir) readAction(id string) (objectID string, size int64, _ error) {
+func (d *Dir) readAction(id string) (outputID string, size int64, _ error) {
 	return d.readActionFile(id, d.actionPath(id))
 }
 
-func (d *Dir) readActionFile(id, path string) (objectID string, size int64, _ error) {
+func (d *Dir) readActionFile(id, path string) (outputID string, size int64, _ error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", 0, err
@@ -227,19 +227,19 @@ func (d *Dir) readActionFile(id, path string) (objectID string, size int64, _ er
 	return fs[0], size, err
 }
 
-func (d *Dir) writeAction(id, objectID string, size int64) error {
+func (d *Dir) writeAction(id, outputID string, size int64) error {
 	path, err := makePath(id, d.actionPath)
 	if err != nil {
 		return err
 	}
 	return atomicfile.Tx(path, 0644, func(f *atomicfile.File) error {
-		_, err := fmt.Fprintf(f, "%s %d\n", objectID, size)
+		_, err := fmt.Fprintf(f, "%s %d\n", outputID, size)
 		return err
 	})
 }
 
 func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
-	path, err := makePath(obj.ObjectID, d.objectPath)
+	path, err := makePath(obj.OutputID, d.objectPath)
 	if err != nil {
 		return "", 0, err
 	}
