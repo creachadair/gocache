@@ -113,7 +113,7 @@ func TestServer(t *testing.T) {
 
 	// Run the client...
 	rsps := make(map[int64]*progResponse)
-	cli := taskgroup.Go(taskgroup.NoError(func() {
+	cli := taskgroup.Run(func() {
 		defer cw.Close() // close the channel to the server
 
 		// The test program specifies the order of operations the client executes.
@@ -170,7 +170,7 @@ func TestServer(t *testing.T) {
 				}
 			}
 		}
-	}))
+	})
 	cli.Wait()
 	// client complete
 
