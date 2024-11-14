@@ -22,8 +22,10 @@ type progRequest struct {
 	// ActionID is non-nil for get and puts.
 	ActionID []byte `json:",omitempty"` // or nil if not used
 
-	// ObjectID is set for Type "put" and "output-file".
-	OutputID []byte `json:",omitempty"` // or nil if not used
+	// OutputID is set for Type "put" and "output-file".
+	//
+	// TODO(creachadair): Remove the name override once the default changes.
+	OutputID []byte `json:"ObjectID,omitempty"` // or nil if not used
 
 	// Body is the body for "put" requests. It's sent after the JSON object
 	// as a base64-encoded JSON string when BodySize is non-zero.
