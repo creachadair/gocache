@@ -227,7 +227,8 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 		}
 		return s.handleGet(ctx, req)
 	case "put":
-		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, req.OutputID, req.BodySize)
+		outputID := req.outputID()
+		s.vlogf("bc B PUT R:%d, A:%x, O:%x, S:%d", req.ID, req.ActionID, outputID, req.BodySize)
 		defer func() {
 			if oerr != nil {
 				s.putErrors.Add(1)
@@ -236,7 +237,7 @@ func (s *Server) handleRequest(ctx context.Context, req *progRequest) (pr *progR
 				req.ID, oerr, time.Since(start), value.At(pr).DiskPath)
 		}()
 		s.putRequests.Add(1)
-		if len(req.ActionID) == 0 || len(req.OutputID) == 0 {
+		if len(req.ActionID) == 0 || len(outputID) == 0 {
 			// This should not be possible with a real toolchain, but defend
 			// against weird input from a human testing things.
 			return nil, errors.New("put: invalid ActionID/OutputID")
