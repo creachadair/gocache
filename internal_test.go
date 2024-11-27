@@ -30,8 +30,9 @@ func TestServer(t *testing.T) {
 	// Create an output file for a test object, so that the server plumbing can
 	// successfully find it when it's reported back.
 	// Note we set the modification time here so that the output will be stable.
+	dir := t.TempDir()
 	objTime := time.Date(2024, 8, 17, 14, 42, 45, 0, time.UTC)
-	objPath := filepath.Join(t.TempDir(), testObject)
+	objPath := filepath.Join(dir, testObject)
 	if err := os.WriteFile(objPath, []byte("xyzzy"), 0600); err != nil {
 		t.Fatalf("Create test object: %v", err)
 	}
@@ -69,7 +70,7 @@ func TestServer(t *testing.T) {
 		},
 		Put: func(ctx context.Context, obj Object) (diskPath string, _ error) {
 			checkContext(ctx)
-			return objPath, nil
+			return filepath.Join(dir, obj.OutputID), nil
 		},
 		Close: func(ctx context.Context) error {
 			checkContext(ctx)
