@@ -309,7 +309,7 @@ func (s *Server) handlePut(ctx context.Context, req *progRequest) (pr *progRespo
 
 	diskPath, err := s.Put(ctx, Object{
 		ActionID: fmt.Sprintf("%x", req.ActionID),
-		OutputID: fmt.Sprintf("%x", req.OutputID),
+		OutputID: fmt.Sprintf("%x", req.outputID()),
 		Size:     req.BodySize,
 		Body:     body,
 	})
