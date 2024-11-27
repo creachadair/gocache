@@ -141,6 +141,13 @@ func TestServer(t *testing.T) {
 			{send: &progRequest{ID: 5, Command: "put"}}, // invalid: no action/object ID
 			{send: &progRequest{ID: 6, Command: "get"}}, // invalid: no action ID
 			{wait: true},
+			{send: &progRequest{ID: 7, Command: "put",
+				ActionID:    []byte("\x04"),
+				OldOutputID: []byte("\x0b\x1e\xc7"),
+				BodySize:    5,
+				Body:        strings.NewReader("apple"),
+			}},
+			{wait: true},
 			{wait: true},
 			{send: &progRequest{ID: 999, Command: "close"}},
 			{wait: true},
@@ -201,6 +208,7 @@ func TestServer(t *testing.T) {
 		4:   {ID: 4, DiskPath: objPath},
 		5:   {ID: 5, Err: "put: invalid ActionID/OutputID"},
 		6:   {ID: 6, Err: "get: invalid ActionID"},
+		7:   {ID: 7, DiskPath: objPath},
 		999: {ID: 999}, // close response
 	}); diff != "" {
 		t.Errorf("Responses (-got, +want):\n%s", diff)

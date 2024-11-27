@@ -23,9 +23,14 @@ type progRequest struct {
 	ActionID []byte `json:",omitempty"` // or nil if not used
 
 	// OutputID is set for Type "put" and "output-file".
+	OutputID []byte `json:"OutputID,omitempty"` // or nil if not used
+
+	// OldOutputID is a workaround for the rename of "ObjectID" to "OutputID"
+	// between Go 1.23 and Go 1.24. Do not use this field, it will be removed.
 	//
-	// TODO(creachadair): Remove the name override once the default changes.
-	OutputID []byte `json:"ObjectID,omitempty"` // or nil if not used
+	// TODO(creachadair): Remove after Go 1.24 is released with cacheprog as a
+	// non-experimental feature.
+	OldOutputID []byte `json:"ObjectID,omitempty"`
 
 	// Body is the body for "put" requests. It's sent after the JSON object
 	// as a base64-encoded JSON string when BodySize is non-zero.
@@ -37,6 +42,15 @@ type progRequest struct {
 
 	// BodySize is the number of bytes of Body. If zero, the body isn't written.
 	BodySize int64 `json:",omitempty"`
+}
+
+// outputID returns the output ID from r, preferring OutputID if it is present,
+// and otherwise falling back to OldOutputID..
+func (r *progRequest) outputID() []byte {
+	if len(r.OutputID) != 0 {
+		return r.OutputID
+	}
+	return r.OldOutputID
 }
 
 // progResponse is a JSON encoded response to the client.
