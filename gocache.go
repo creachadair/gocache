@@ -274,7 +274,9 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	// Safety check: The output ID should be hex-encoded and non-empty.
 	if outputID == "" {
 		return nil, errors.New("get: empty output ID")
-	} else if _, err := hex.DecodeString(outputID); err != nil {
+	}
+	outputHexID, err := hex.DecodeString(outputID)
+	if err != nil {
 		return nil, fmt.Errorf("get: invalid object ID: %w", err)
 	}
 
@@ -295,7 +297,7 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	s.getHits.Add(1)
 	s.getHitBytes.Add(fi.Size())
 	added := fi.ModTime().UTC()
-	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath}, nil
+	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath, OutputID: outputHexID}, nil
 }
 
 // handlePut handles "put" requests.
