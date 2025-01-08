@@ -264,18 +264,18 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	if s.Get == nil {
 		return &progResponse{Miss: true}, nil
 	}
-	outputID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
+	hexOutputID, diskPath, err := s.Get(ctx, fmt.Sprintf("%x", req.ActionID))
 	if err != nil {
 		return nil, fmt.Errorf("get %x: %w", req.ActionID, err)
-	} else if outputID == "" && diskPath == "" {
+	} else if hexOutputID == "" && diskPath == "" {
 		return &progResponse{Miss: true}, nil
 	}
 
 	// Safety check: The output ID should be hex-encoded and non-empty.
-	if outputID == "" {
+	if hexOutputID == "" {
 		return nil, errors.New("get: empty output ID")
 	}
-	outputHexID, err := hex.DecodeString(outputID)
+	outputID, err := hex.DecodeString(hexOutputID)
 	if err != nil {
 		return nil, fmt.Errorf("get: invalid object ID: %w", err)
 	}
@@ -297,7 +297,7 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	s.getHits.Add(1)
 	s.getHitBytes.Add(fi.Size())
 	added := fi.ModTime().UTC()
-	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath, OutputID: outputHexID}, nil
+	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath, OutputID: outputID}, nil
 }
 
 // handlePut handles "put" requests.
