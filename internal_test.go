@@ -204,7 +204,7 @@ func TestServer(t *testing.T) {
 
 	// Check that we got the desired responses.
 	if diff := gocmp.Diff(rsps, map[int64]*progResponse{
-		2:   {ID: 2, Size: 5, Time: &objTime, DiskPath: objPath},
+		2:   {ID: 2, Size: 5, Time: &objTime, DiskPath: objPath, OutputID: []byte("\x0b\x1e\xc7")},
 		3:   {ID: 3, Err: "get 99: erroneous condition"},
 		4:   {ID: 4, DiskPath: objPath},
 		5:   {ID: 5, Err: "put: invalid ActionID/OutputID"},
