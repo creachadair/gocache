@@ -8,5 +8,5 @@ require (
 	github.com/creachadair/flax v0.0.4
 	github.com/creachadair/mds v0.24.0
 	github.com/creachadair/taskgroup v0.13.2
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 )
