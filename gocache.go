@@ -1,9 +1,9 @@
 // Package gocache implements a server stub for the Go toolchain
 // cache process protocol.
 //
-// As of 15-Aug-2024, support for the GOCACHEPROG environment variable still
-// requires building a custom Go toolchain with GOEXPERIMENT=cacheprog set.
-// See https://github.com/golang/go/issues/64876 for discussion.
+// Since Go 1.24, support for the GOCACHEPROG environment variable is available
+// by default. Versions of Go prior to 1.24 require building a custom toolchain
+// with GOEXPERIMENT=cacheprog set.
 //
 // The implementation in this package is based on the code from the internal
 // https://pkg.go.dev/cmd/go/internal/cache package.
