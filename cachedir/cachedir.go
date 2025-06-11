@@ -110,7 +110,7 @@ type Stats struct {
 	ActionsPruned int           // the number of actions pruned
 	Objects       int           // the number of objects cached
 	ObjectsPruned int           // the number of objects pruned
-	BytesPruned   int64         // the nuber of object bytes pruned
+	BytesPruned   int64         // the number of object bytes pruned
 	Elapsed       time.Duration // how long pruning took
 }
 
