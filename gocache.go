@@ -296,8 +296,12 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	// Cache hit.
 	s.getHits.Add(1)
 	s.getHitBytes.Add(fi.Size())
-	added := fi.ModTime().UTC()
-	return &progResponse{Size: fi.Size(), Time: &added, DiskPath: diskPath, OutputID: outputID}, nil
+	return &progResponse{
+		Size:     fi.Size(),
+		Time:     value.Ptr(fi.ModTime().UTC()),
+		DiskPath: diskPath,
+		OutputID: outputID,
+	}, nil
 }
 
 // handlePut handles "put" requests.
