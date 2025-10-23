@@ -32,6 +32,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -232,8 +233,8 @@ func (d *Dir) writeAction(id, outputID string, size int64) error {
 	if err != nil {
 		return err
 	}
-	return atomicfile.Tx(path, 0644, func(f *atomicfile.File) error {
-		_, err := fmt.Fprintf(f, "%s %d\n", outputID, size)
+	return atomicfile.Tx(path, 0644, func(w io.Writer) error {
+		_, err := fmt.Fprintf(w, "%s %d\n", outputID, size)
 		return err
 	})
 }
