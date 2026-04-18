@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/creachadair/mds/mctx"
 	"github.com/creachadair/mds/value"
 	"github.com/creachadair/taskgroup"
 )
@@ -382,8 +383,7 @@ type Object struct {
 // Logf writes a log to the logger associated with ctx, if one is defined.
 // The context passed to the callbacks of a Server supports this.
 func Logf(ctx context.Context, msg string, args ...any) {
-	logf, ok := ctx.Value(logKey{}).(func(string, ...any))
-	if ok {
+	if logf, ok := logKey.Lookup(ctx).GetOK(); ok && logf != nil {
 		logf(msg, args...)
 	}
 }
@@ -391,7 +391,9 @@ func Logf(ctx context.Context, msg string, args ...any) {
 // WithLogf returns a child of ctx with the specified log function attached.
 // The resulting context can be used with [Logf] to send logs to f.
 func WithLogf(ctx context.Context, f func(string, ...any)) context.Context {
-	return context.WithValue(ctx, logKey{}, f)
+	return logKey.Attach(ctx, f)
 }
 
-type logKey struct{}
+type logger func(string, ...any)
+
+var logKey mctx.Key[logger]
