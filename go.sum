@@ -1,7 +1,7 @@
 github.com/creachadair/atomicfile v0.4.1 h1:72SopAy00u42/iL0p3CZILv51oUEem8uDbxUfnzmsXU=
 github.com/creachadair/atomicfile v0.4.1/go.mod h1:+PsFcWa9SZuK+xnykzupXErqESId5eCGsuqFWkazMQI=
-github.com/creachadair/command v0.2.1 h1:o5gU0+Oa1uEcCyW9zYo6ZeZYoczGiG7qtHJ6VGxSBSw=
-github.com/creachadair/command v0.2.1/go.mod h1:B2cUpODBEw3tOHzEX8VHmlvw7Y06xXxiXxoTEgsRzdY=
+github.com/creachadair/command v0.2.2 h1:4RGsUhqFf1imFC+vMWOOCiQdncThCdcdMJp0JNCjxxc=
+github.com/creachadair/command v0.2.2/go.mod h1:Z6Zp6CSJcnaWWR4wHgdqzODnFdxFJAaa/DrcVkeUu3E=
 github.com/creachadair/flax v0.0.5 h1:zt+CRuXQASxwQ68e9GHAOnEgAU29nF0zYMHOCrL5wzE=
 github.com/creachadair/flax v0.0.5/go.mod h1:F1PML0JZLXSNDMNiRGK2yjm5f+L9QCHchyHBldFymj8=
 github.com/creachadair/mds v0.27.1 h1:GlO1tPbrsaoafkF6mz7dFutkGXAtIfQLI450u0ypqwA=

@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/creachadair/atomicfile v0.4.1
-	github.com/creachadair/command v0.2.1
+	github.com/creachadair/command v0.2.2
 	github.com/creachadair/flax v0.0.5
 	github.com/creachadair/mds v0.27.1
 	github.com/creachadair/taskgroup v0.14.2
