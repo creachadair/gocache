@@ -6,7 +6,7 @@ require (
 	github.com/creachadair/atomicfile v0.4.1
 	github.com/creachadair/command v0.2.6
 	github.com/creachadair/flax v0.0.6
-	github.com/creachadair/mds v0.29.0
+	github.com/creachadair/mds v0.29.2
 	github.com/creachadair/taskgroup v0.14.4
 	github.com/google/go-cmp v0.7.0
 )
