@@ -41,6 +41,20 @@ func TestDir(t *testing.T) {
 		t.Errorf(`Get(bogus-action): got %q, %q, nil; want "", "", <error>`, obj, path)
 	}
 
+	// A short object is rejected without committing its contents.
+	if _, err := d.Put(ctx, gocache.Object{
+		ActionID: "short-action",
+		OutputID: "short-object",
+		Size:     5,
+		Body:     strings.NewReader("bad"),
+	}); err == nil {
+		t.Error("Put(short-action): got nil, want error")
+	}
+	checkMiss("short-action")
+	if _, err := os.Stat(filepath.Join(dir, "output", "sh", "short-object")); !os.IsNotExist(err) {
+		t.Errorf("Short object should not exist, err=%v", err)
+	}
+
 	// Put a real object successfully.
 	testTime := time.Date(2024, 8, 25, 12, 46, 50, 0, time.Local)
 	diskPath, err := d.Put(ctx, gocache.Object{
