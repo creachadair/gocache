@@ -252,7 +252,17 @@ func (d *Dir) writeObject(obj gocache.Object) (string, int64, error) {
 		return path, fi.Size(), nil
 	}
 
-	sz, err := atomicfile.WriteAll(path, obj.Body, 0644)
+	var sz int64
+	err = atomicfile.Tx(path, 0644, func(w io.Writer) error {
+		var err error
+		sz, err = io.Copy(w, obj.Body)
+		if err != nil {
+			return err
+		} else if sz != obj.Size {
+			return fmt.Errorf("object size is %d bytes, want %d", sz, obj.Size)
+		}
+		return nil
+	})
 	if err == nil && !obj.ModTime.IsZero() {
 		os.Chtimes(path, time.Time{} /* atime: ignore */, obj.ModTime) // best-effort
 	}
