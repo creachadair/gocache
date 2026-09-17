@@ -12,7 +12,6 @@ package gocache
 import (
 	"bufio"
 	"bytes"
-	"cmp"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -308,7 +307,10 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 // handlePut handles "put" requests.
 func (s *Server) handlePut(ctx context.Context, req *progRequest) (pr *progResponse, oerr error) {
 	// If no body was provided, swap in an empty reader.
-	body := cmp.Or(req.Body, io.Reader(strings.NewReader("")))
+	body := req.Body
+	if body == nil {
+		body = strings.NewReader("")
+	}
 	defer io.Copy(io.Discard, body)
 	if s.Put == nil {
 		return nil, errors.New("put: cache is read-only")

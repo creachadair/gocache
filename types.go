@@ -11,19 +11,19 @@ import (
 // edits.
 type progRequest struct {
 	// ID is a unique number per process across all requests.
-	// It must be echoed in the ProgResponse from the child.
+	// It must be echoed in the progResponse from the child.
 	ID int64
 
 	// Command is the type of request.
 	// The cmd/go tool will only send commands that were declared
-	// as supported by the child.
+	// as supported by the cache program.
 	Command string
 
-	// ActionID is non-nil for get and puts.
+	// ActionID is non-empty for "get" and "put" requests.
 	ActionID []byte `json:",omitempty"` // or nil if not used
 
-	// OutputID is set for Type "put" and "output-file".
-	OutputID []byte `json:"OutputID,omitempty"` // or nil if not used
+	// OutputID is set for "put" requests.
+	OutputID []byte `json:"OutputID,omitempty"`
 
 	// OldOutputID is a workaround for the rename of "ObjectID" to "OutputID"
 	// between Go 1.23 and Go 1.24. Do not use this field, it will be removed.
@@ -32,16 +32,15 @@ type progRequest struct {
 	// non-experimental feature.
 	OldOutputID []byte `json:"ObjectID,omitempty"`
 
-	// Body is the body for "put" requests. It's sent after the JSON object
-	// as a base64-encoded JSON string when BodySize is non-zero.
-	// It's sent as a separate JSON value instead of being a struct field
-	// send in this JSON object so large values can be streamed in both directions.
-	// The base64 string body of a ProgRequest will always be written
-	// immediately after the JSON object and a newline.
+	// Body is the body for "put" requests.
+	//
+	// When BodySize is non-zero, the request object is immediately followed in
+	// the input stream, after a terminating newline, by a base64-encoded JSON
+	// string containing the body.
 	Body io.Reader `json:"-"`
 
 	// BodySize is the number of bytes of Body. If zero, the body isn't written.
-	BodySize int64 `json:",omitempty"`
+	BodySize int64 `json:",omitzero"`
 }
 
 // outputID returns the output ID from r, preferring OutputID if it is present,
@@ -58,27 +57,30 @@ func (r *progRequest) outputID() []byte {
 // Copied from: https://pkg.go.dev/cmd/go/internal/cache#ProgResponse with
 // minor edits.
 type progResponse struct {
-	ID int64 // that corresponds to ProgRequest; they can be answered out of order
+	// ID is the request ID for which this is the response.
+	// Responses may be sent out of order.
+	ID int64
 
-	Err string `json:",omitempty"` // if non-empty, the error
+	// Error, if non-empty, indicates that the request failed, and gives an
+	// explanatory message. If this is set, the other fields below are not.
+	Err string `json:",omitzero"`
 
-	// KnownCommands is included in the first message that cache helper program
-	// writes to stdout on startup (with ID==0). It includes the
-	// ProgRequest.Command types that are supported by the program.
+	// KnownCommands lists the command names understood by the cache.
 	//
-	// This lets us extend the protocol gracefully over time (adding "get2",
-	// etc), or fail gracefully when needed. It also lets us verify the program
-	// wants to be a cache helper.
+	// This field is set in the first message that cache program writes on
+	// startup (with ID==0). It includes the progRequest.Command types that are
+	// supported by the program. The cmd/go tool will only send commands that
+	// are declared in the initial greeting.
 	KnownCommands []string `json:",omitempty"`
 
 	// For Get requests.
-	Miss     bool       `json:",omitempty"` // cache miss
+	Miss     bool       `json:",omitzero"` // cache miss
 	OutputID []byte     `json:",omitempty"`
-	Size     int64      `json:",omitempty"` // in bytes
+	Size     int64      `json:",omitzero"`  // in bytes
 	Time     *time.Time `json:",omitempty"` // an Entry.Time; when the object was added to the docs
 
 	// DiskPath is the absolute path on disk of the ObjectID corresponding
 	// a "get" request's ActionID (on cache hit) or a "put" request's
 	// provided ObjectID.
-	DiskPath string `json:",omitempty"`
+	DiskPath string `json:",omitzero"`
 }
