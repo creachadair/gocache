@@ -74,10 +74,10 @@ type progResponse struct {
 	KnownCommands []string `json:",omitempty"`
 
 	// For Get requests.
-	Miss     bool       `json:",omitzero"` // cache miss
-	OutputID []byte     `json:",omitempty"`
-	Size     int64      `json:",omitzero"`  // in bytes
-	Time     *time.Time `json:",omitempty"` // an Entry.Time; when the object was added to the docs
+	Miss     bool      `json:",omitzero"` // cache miss
+	OutputID []byte    `json:",omitempty"`
+	Size     int64     `json:",omitzero"` // in bytes
+	Time     time.Time `json:",omitzero"` // when the object was added
 
 	// DiskPath is the absolute path on disk of the ObjectID corresponding
 	// a "get" request's ActionID (on cache hit) or a "put" request's

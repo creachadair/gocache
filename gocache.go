@@ -298,7 +298,7 @@ func (s *Server) handleGet(ctx context.Context, req *progRequest) (pr *progRespo
 	s.getHitBytes.Add(fi.Size())
 	return &progResponse{
 		Size:     fi.Size(),
-		Time:     value.Ptr(fi.ModTime().UTC()),
+		Time:     fi.ModTime().UTC(),
 		DiskPath: diskPath,
 		OutputID: outputID,
 	}, nil
