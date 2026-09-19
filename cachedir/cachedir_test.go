@@ -85,3 +85,20 @@ func TestDir(t *testing.T) {
 
 	checkMiss("good-action")
 }
+
+func TestPruneEmpty(t *testing.T) {
+	path := t.TempDir()
+	cd, err := cachedir.New(path)
+	if err != nil {
+		t.Fatalf("Create test cache: %v", err)
+	}
+	if _, err := cd.PruneEntries(t.Context(), 1*time.Second); err != nil {
+		t.Errorf("PruneEntries: unexpected error: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(path, "action"), 0755); err != nil {
+		t.Fatalf("Create action directory: %v", err)
+	}
+	if _, err := cd.PruneEntries(t.Context(), 1*time.Second); err != nil {
+		t.Errorf("PruneEntries: unexpected error: %v", err)
+	}
+}

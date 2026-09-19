@@ -128,7 +128,9 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 	// Mark: Delete expired actions and collect object IDs.
 	root := filepath.Join(d.path, "action")
 	if err := filepath.WalkDir(root, func(path string, de fs.DirEntry, err error) error {
-		if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil // e.g., if the cache directory is entirely empty
+		} else if err != nil {
 			return err
 		} else if !de.Type().IsRegular() {
 			return nil // skip directories and other stuff
@@ -170,7 +172,9 @@ func (d *Dir) PruneEntries(ctx context.Context, age time.Duration) (s Stats, _ e
 	// Sweep: Delete objects not referenced by unexpired actions.
 	root = filepath.Join(d.path, "output")
 	if err := filepath.WalkDir(root, func(path string, de fs.DirEntry, err error) error {
-		if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil // e.g., if the cache directory is entirely empty
+		} else if err != nil {
 			return err
 		} else if !de.Type().IsRegular() {
 			return nil // skip directories and other stuff
